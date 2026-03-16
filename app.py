@@ -165,7 +165,7 @@ def plot_pie(labels, values, title, colors):
 # Dataset Processing
 # ==============================
 
-def process_dataset(df, fake_model, sentiment_model, summarizer):
+def process_dataset(df, fake_model, sentiment_model, summarization_model):
 
     reviews = df["review_body"].dropna().tolist()
 
@@ -188,7 +188,7 @@ def process_dataset(df, fake_model, sentiment_model, summarizer):
 # Single Review Analysis
 # ==============================
 
-def analyze_single_review(review, fake_model, sentiment_model, summarizer):
+def analyze_single_review(review, fake_model, sentiment_model, summarization_model):
 
     fake_result = fake_model(review)[0]
 
@@ -198,7 +198,7 @@ def analyze_single_review(review, fake_model, sentiment_model, summarizer):
 
         sentiment = sentiment_model(review)[0]
 
-        summary = generate_summary([review], summarizer)
+        summary = generate_summary([review], summarization_model)
 
         output["sentiment"] = sentiment
         output["summary"] = summary
@@ -311,7 +311,7 @@ def main():
                 df,
                 fake_model,
                 sentiment_model,
-                summarizer
+                summarization_model
             )
 
             progress.progress(100)
