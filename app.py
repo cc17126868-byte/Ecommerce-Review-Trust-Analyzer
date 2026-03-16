@@ -198,7 +198,7 @@ def analyze_single_review(review, fake_model, sentiment_model, tokenizer, summar
 
         sentiment = sentiment_model(review)[0]
 
-        ssummary = generate_summary([review], tokenizer, summarization_model)
+        summary = generate_summary([review], tokenizer, summarization_model)
 
         output["sentiment"] = sentiment
         output["summary"] = summary
