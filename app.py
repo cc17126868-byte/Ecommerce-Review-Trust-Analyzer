@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import random
+from transformers import pipeline
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from collections import Counter
 import re
