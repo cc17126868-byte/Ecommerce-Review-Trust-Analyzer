@@ -101,31 +101,34 @@ def generate_summary(reviews, model):
     if len(reviews) == 0:
         return "No real reviews available."
 
-    sample_reviews = random.sample(reviews, min(10, len(reviews)))
+    sample_reviews = random.sample(reviews, min(5, len(reviews)))
 
-    combined_text = " ".join(sample_reviews[:5])
+    combined_text = " ".join(sample_reviews)
 
     prompt = f"""
-    Instruction: Summarize the following customer reviews into one short sentence.
+Summarize the following customer reviews in ONE short sentence.
 
-    Reviews:
-    {combined_text}
+Reviews:
+{combined_text}
 
-    Summary:
-    """
+Summary:
+"""
 
     result = model(
         prompt,
-        max_new_tokens=50,
+        max_new_tokens=40,
         do_sample=False
     )
 
-    summary = result[0]["generated_text"]
+    text = result[0]["generated_text"]
 
-    if "Summary:" in summary:
-        summary = summary.split("Summary:")[-1]
+    # remove prompt
+    summary = text.replace(prompt, "").strip()
 
-    return summary.strip()
+    if len(summary) == 0:
+        summary = text[-120:]   # fallback
+
+    return summary
 
 
 # ==============================
