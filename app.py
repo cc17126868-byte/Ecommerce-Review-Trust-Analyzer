@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import random
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from collections import Counter
 import re
 
@@ -12,7 +12,6 @@ import re
 
 @st.cache_resource
 def load_models():
-    """Load HuggingFace models."""
 
     fake_detector = pipeline(
         "text-classification",
@@ -24,12 +23,12 @@ def load_models():
         model="JerryJJJJJ/sentiment-amazon-roberta"
     )
 
-    summarizer = pipeline(
-        "text-generation",
-        model="JerryJJJJJ/review-summarization-flan-t5"
-    )
+    model_name = "JerryJJJJJ/review-summarization-flan-t5"
 
-    return fake_detector, sentiment_model, summarizer
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    summarization_model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+    return fake_detector, sentiment_model, tokenizer, summarization_model
 
 
 # ==============================
@@ -96,37 +95,30 @@ def analyze_sentiment(reviews, model):
 # Review Summary
 # ==============================
 
-def generate_summary(reviews, model):
+def generate_summary(reviews, tokenizer, model):
 
     if len(reviews) == 0:
-        return "No real reviews available."
+        return "No authentic reviews available."
 
     sample_reviews = random.sample(reviews, min(5, len(reviews)))
 
     combined_text = " ".join(sample_reviews)
 
-    prompt = f"""
-Summarize the following customer reviews in ONE short sentence.
-
-Reviews:
-{combined_text}
-
-Summary:
-"""
-
-    result = model(
-        prompt,
-        max_new_tokens=40,
-        do_sample=False
+    inputs = tokenizer(
+        combined_text,
+        return_tensors="pt",
+        truncation=True
     )
 
-    text = result[0]["generated_text"]
+    outputs = model.generate(
+        **inputs,
+        max_length=40
+    )
 
-    # remove prompt
-    summary = text.replace(prompt, "").strip()
-
-    if len(summary) == 0:
-        summary = text[-120:]   # fallback
+    summary = tokenizer.decode(
+        outputs[0],
+        skip_special_tokens=True
+    )
 
     return summary
 
@@ -229,7 +221,12 @@ def main():
     """
     )
 
-    fake_model, sentiment_model, summarizer = load_models()
+    fake_model, sentiment_model, tokenizer, summarization_model = load_models()
+    summary = generate_summary(
+    real_reviews,
+    tokenizer,
+    summarization_model
+)
 
     tab1, tab2 = st.tabs(["Single Review", "Dataset Analysis"])
 
