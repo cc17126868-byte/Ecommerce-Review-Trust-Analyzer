@@ -246,7 +246,7 @@ def main():
                 review,
                 fake_model,
                 sentiment_model,
-                summarizer
+                summarization_model
             )
 
             col1, col2 = st.columns(2)
