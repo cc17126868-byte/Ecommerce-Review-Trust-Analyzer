@@ -25,7 +25,7 @@ def load_models():
     )
 
     summarizer = pipeline(
-        "text2text-generation",
+        "text-generation",
         model="JerryJJJJJ/review-summarization-flan-t5"
     )
 
@@ -103,13 +103,16 @@ def generate_summary(reviews, model):
 
     sample_reviews = random.sample(reviews, min(10, len(reviews)))
 
-    combined_text = " ".join(sample_reviews)
+    combined_text = " ".join(sample_reviews[:5])
 
     prompt = f"""
-Summarize the following customer review in one short sentence:
+    Instruction: Summarize the following customer reviews into one short sentence.
 
-{combined_text}
-"""
+    Reviews:
+    {combined_text}
+
+    Summary:
+    """
 
     result = model(
         prompt,
@@ -118,6 +121,9 @@ Summarize the following customer review in one short sentence:
     )
 
     summary = result[0]["generated_text"]
+
+    if "Summary:" in summary:
+        summary = summary.split("Summary:")[-1]
 
     return summary.strip()
 
