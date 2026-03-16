@@ -173,7 +173,11 @@ def process_dataset(df, fake_model, sentiment_model, summarizer):
 
     sentiment_stats = analyze_sentiment(real_reviews, sentiment_model)
 
-    summary = generate_summary(real_reviews, summarizer)
+    summary = generate_summary(
+    real_reviews,
+    tokenizer,
+    summarization_model
+)
 
     keywords = extract_keywords(real_reviews)
 
@@ -223,11 +227,6 @@ def main():
     )
 
     fake_model, sentiment_model, tokenizer, summarization_model = load_models()
-    summary = generate_summary(
-    real_reviews,
-    tokenizer,
-    summarization_model
-)
 
     tab1, tab2 = st.tabs(["Single Review", "Dataset Analysis"])
 
