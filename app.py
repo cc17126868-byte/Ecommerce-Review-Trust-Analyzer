@@ -3,6 +3,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import random
 from transformers import pipeline
+from collections import Counter
+import re
 
 # ==============================
 # Model Loading
@@ -10,7 +12,7 @@ from transformers import pipeline
 
 @st.cache_resource
 def load_models():
-    """Load all HuggingFace models."""
+    """Load HuggingFace models."""
 
     fake_detector = pipeline(
         "text-classification",
@@ -35,7 +37,6 @@ def load_models():
 # ==============================
 
 def detect_fake_reviews(reviews, model):
-    """Detect fake reviews and return statistics."""
 
     results = model(reviews)
 
@@ -68,7 +69,6 @@ def detect_fake_reviews(reviews, model):
 # ==============================
 
 def analyze_sentiment(reviews, model):
-    """Analyze sentiment of real reviews."""
 
     results = model(reviews)
 
@@ -93,17 +93,22 @@ def analyze_sentiment(reviews, model):
 
 
 # ==============================
-# Review Summarization
+# Review Summary
 # ==============================
 
-def summarize_reviews(model, reviews):
+def generate_summary(reviews, model):
 
-    text = " ".join(reviews)
+    if len(reviews) == 0:
+        return "No real reviews available."
+
+    sample_reviews = random.sample(reviews, min(10, len(reviews)))
+
+    combined_text = " ".join(sample_reviews)
 
     prompt = f"""
-    Summarize the following customer reviews in a short paragraph:
+    Summarize the following customer reviews briefly:
 
-    {text}
+    {combined_text}
 
     Summary:
     """
@@ -114,51 +119,49 @@ def summarize_reviews(model, reviews):
         do_sample=False
     )
 
-    return result[0]["generated_text"].split("Summary:")[-1].strip()
+    text = result[0]["generated_text"]
+
+    if "Summary:" in text:
+        text = text.split("Summary:")[-1]
+
+    return text.strip()
+
+
+# ==============================
+# Keyword Extraction
+# ==============================
+
+def extract_keywords(reviews):
+
+    text = " ".join(reviews).lower()
+
+    words = re.findall(r'\b[a-z]{4,}\b', text)
+
+    stopwords = {
+        "this","that","with","have","very","from","they","were","would",
+        "there","their","about","after","before","really"
+    }
+
+    filtered = [w for w in words if w not in stopwords]
+
+    common = Counter(filtered).most_common(10)
+
+    return common
+
 
 # ==============================
 # Visualization
 # ==============================
 
-def plot_pie_chart(labels, values, title):
-    """Create pie chart."""
+def plot_pie(labels, values, title, colors):
 
     fig, ax = plt.subplots()
 
-    ax.pie(values, labels=labels, autopct="%1.1f%%")
+    ax.pie(values, labels=labels, autopct="%1.1f%%", colors=colors)
 
     ax.set_title(title)
 
     return fig
-
-
-# ==============================
-# Single Review Analysis
-# ==============================
-
-def analyze_single_review(review, fake_model, sentiment_model, summarizer):
-
-    fake_result = fake_model(review)[0]
-
-    output = {
-        "fake": fake_result
-    }
-
-    if fake_result["label"] not in ["FAKE", "LABEL_0"]:
-
-        sentiment = sentiment_model(review)[0]
-
-        summary = summarizer(
-            "summarize: " + review,
-            max_length=40,
-            min_length=5,
-            do_sample=False
-        )[0]["generated_text"]
-
-        output["sentiment"] = sentiment
-        output["summary"] = summary
-
-    return output
 
 
 # ==============================
@@ -175,84 +178,101 @@ def process_dataset(df, fake_model, sentiment_model, summarizer):
 
     summary = generate_summary(real_reviews, summarizer)
 
-    return fake_stats, sentiment_stats, summary
+    keywords = extract_keywords(real_reviews)
+
+    return fake_stats, sentiment_stats, summary, keywords
 
 
 # ==============================
-# UI
+# Single Review Analysis
+# ==============================
+
+def analyze_single_review(review, fake_model, sentiment_model, summarizer):
+
+    fake_result = fake_model(review)[0]
+
+    output = {"fake": fake_result}
+
+    if fake_result["label"] not in ["FAKE", "LABEL_0"]:
+
+        sentiment = sentiment_model(review)[0]
+
+        summary = generate_summary([review], summarizer)
+
+        output["sentiment"] = sentiment
+        output["summary"] = summary
+
+    return output
+
+
+# ==============================
+# Main UI
 # ==============================
 
 def main():
 
     st.set_page_config(
         page_title="E-Commerce Review Trust Analyzer",
+        page_icon="📊",
         layout="wide"
     )
 
-    st.title("E-Commerce Review Trust & Feedback Analyzer")
+    st.title("📊 E-Commerce Review Trust & Feedback Analyzer")
 
-    st.write(
-        "This application detects fake reviews, analyzes customer sentiment, "
-        "and summarizes genuine feedback to help merchants understand product reputation."
+    st.markdown(
+    """
+    Detect **fake reviews**, analyze **customer sentiment**, and generate **automatic feedback insights**.
+    """
     )
 
     fake_model, sentiment_model, summarizer = load_models()
 
-    tab1, tab2 = st.tabs(["Single Review Analysis", "Dataset Analysis"])
+    tab1, tab2 = st.tabs(["Single Review", "Dataset Analysis"])
 
-    # ===================================
+    # ==================================================
     # Single Review
-    # ===================================
+    # ==================================================
 
     with tab1:
 
         st.header("Single Review Analysis")
 
-        review = st.text_area("Enter a review:")
+        review = st.text_area("Enter review text")
 
         if st.button("Analyze Review"):
 
-            if review.strip() == "":
-                st.warning("Please enter a review.")
+            result = analyze_single_review(
+                review,
+                fake_model,
+                sentiment_model,
+                summarizer
+            )
+
+            col1, col2 = st.columns(2)
+
+            col1.subheader("Fake Review Detection")
+            col1.write(result["fake"])
+
+            if "sentiment" in result:
+
+                col2.subheader("Sentiment")
+                col2.write(result["sentiment"])
+
+                st.subheader("Review Summary")
+                st.write(result["summary"])
 
             else:
 
-                result = analyze_single_review(
-                    review,
-                    fake_model,
-                    sentiment_model,
-                    summarizer
-                )
+                st.warning("Review likely fake. Sentiment skipped.")
 
-                st.subheader("Fake Review Detection")
 
-                st.write(result["fake"])
-
-                if "sentiment" in result:
-
-                    st.subheader("Sentiment")
-
-                    st.write(result["sentiment"])
-
-                    st.subheader("Review Summary")
-
-                    st.write(result["summary"])
-
-                else:
-
-                    st.warning("Review likely fake. Sentiment skipped.")
-
-    # ===================================
+    # ==================================================
     # Dataset Analysis
-    # ===================================
+    # ==================================================
 
     with tab2:
 
-        st.header("Dataset Analysis")
-
-        st.write(
-            "Upload a CSV file containing a column named **review_body**."
-        )
+        st.header("Dataset Review Analysis")
 
         uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
 
@@ -260,51 +280,95 @@ def main():
 
             df = pd.read_csv(uploaded_file)
 
-            if "review_body" not in df.columns:
+            with st.expander("Dataset Preview"):
+                st.dataframe(df.head())
 
-                st.error("CSV must contain column: review_body")
+            progress = st.progress(0)
+
+            fake_stats, sentiment_stats, summary, keywords = process_dataset(
+                df,
+                fake_model,
+                sentiment_model,
+                summarizer
+            )
+
+            progress.progress(100)
+
+            st.subheader("Key Metrics")
+
+            col1, col2, col3 = st.columns(3)
+
+            col1.metric("Total Reviews", fake_stats["total"])
+            col2.metric("Fake Reviews", fake_stats["fake"])
+            col3.metric("Real Reviews", fake_stats["real"])
+
+            trust_score = round((1 - fake_stats["fake"] / fake_stats["total"]) * 100, 2)
+
+            st.metric("Store Trust Score", f"{trust_score}/100")
+
+            if trust_score > 80:
+                st.success("Low Fake Review Risk")
+
+            elif trust_score > 60:
+                st.warning("Moderate Fake Review Risk")
+
+            else:
+                st.error("High Fake Review Risk")
+
+
+            st.subheader("Review Authenticity")
+
+            fig1 = plot_pie(
+                ["Fake", "Real"],
+                [fake_stats["fake"], fake_stats["real"]],
+                "Fake vs Real Reviews",
+                ["#FF9800", "#2196F3"]
+            )
+
+            st.pyplot(fig1)
+
+
+            st.subheader("Customer Sentiment")
+
+            fig2 = plot_pie(
+                ["Positive", "Negative"],
+                [sentiment_stats["positive"], sentiment_stats["negative"]],
+                "Sentiment Distribution",
+                ["#4CAF50", "#FF5252"]
+            )
+
+            st.pyplot(fig2)
+
+
+            st.subheader("Top Customer Feedback Keywords")
+
+            kw_df = pd.DataFrame(keywords, columns=["Keyword", "Frequency"])
+
+            st.table(kw_df)
+
+
+            st.subheader("Customer Feedback Summary")
+
+            st.write(summary)
+
+
+            st.subheader("Business Insight")
+
+            if sentiment_stats["positive"] > sentiment_stats["negative"]:
+
+                st.info(
+                    "Customers generally express positive sentiment toward the product."
+                )
 
             else:
 
-                fake_stats, sentiment_stats, summary = process_dataset(
-                    df,
-                    fake_model,
-                    sentiment_model,
-                    summarizer
+                st.warning(
+                    "Customer sentiment appears negative. Merchants should investigate product issues."
                 )
-
-                st.subheader("Fake Review Statistics")
-
-                st.write(fake_stats)
-
-                fig1 = plot_pie_chart(
-                    ["Fake", "Real"],
-                    [fake_stats["fake"], fake_stats["real"]],
-                    "Fake vs Real Reviews"
-                )
-
-                st.pyplot(fig1)
-
-                st.subheader("Sentiment Distribution")
-
-                fig2 = plot_pie_chart(
-                    ["Positive", "Negative"],
-                    [
-                        sentiment_stats["positive"],
-                        sentiment_stats["negative"]
-                    ],
-                    "Sentiment Distribution"
-                )
-
-                st.pyplot(fig2)
-
-                st.subheader("Customer Feedback Summary")
-
-                st.write(summary)
 
 
 # ==============================
-# Entry Point
+# Entry
 # ==============================
 
 if __name__ == "__main__":
