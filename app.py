@@ -23,7 +23,7 @@ def load_models():
     )
 
     summarizer = pipeline(
-        "text2text-generation",
+        "summarization",
         model="JerryJJJJJ/review-summarization-flan-t5"
     )
 
@@ -107,7 +107,7 @@ def generate_summary(reviews, model):
     combined_text = " ".join(sample_reviews)
 
     result = model(
-        "summarize: " + combined_text,
+        combined_text,
         max_length=80,
         min_length=20,
         do_sample=False
