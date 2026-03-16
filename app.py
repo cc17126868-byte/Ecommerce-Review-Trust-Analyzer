@@ -23,7 +23,7 @@ def load_models():
     )
 
     summarizer = pipeline(
-        "summarization",
+        "text-generation",
         model="JerryJJJJJ/review-summarization-flan-t5"
     )
 
@@ -96,25 +96,25 @@ def analyze_sentiment(reviews, model):
 # Review Summarization
 # ==============================
 
-def generate_summary(reviews, model):
-    """Generate summary from sample reviews."""
+def summarize_reviews(model, reviews):
 
-    if len(reviews) == 0:
-        return "No real reviews available for summarization."
+    text = " ".join(reviews)
 
-    sample_reviews = random.sample(reviews, min(20, len(reviews)))
+    prompt = f"""
+    Summarize the following customer reviews in a short paragraph:
 
-    combined_text = " ".join(sample_reviews)
+    {text}
+
+    Summary:
+    """
 
     result = model(
-        combined_text,
-        max_length=80,
-        min_length=20,
+        prompt,
+        max_new_tokens=80,
         do_sample=False
     )
 
-    return result[0]["generated_text"]
-
+    return result[0]["generated_text"].split("Summary:")[-1].strip()
 
 # ==============================
 # Visualization
