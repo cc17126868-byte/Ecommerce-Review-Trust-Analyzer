@@ -188,7 +188,7 @@ def process_dataset(df, fake_model, sentiment_model, summarization_model):
 # Single Review Analysis
 # ==============================
 
-def analyze_single_review(review, fake_model, sentiment_model, summarization_model):
+def analyze_single_review(review, fake_model, sentiment_model, tokenizer, summarization_model):
 
     fake_result = fake_model(review)[0]
 
@@ -198,7 +198,7 @@ def analyze_single_review(review, fake_model, sentiment_model, summarization_mod
 
         sentiment = sentiment_model(review)[0]
 
-        summary = generate_summary([review], summarization_model)
+        ssummary = generate_summary([review], tokenizer, summarization_model)
 
         output["sentiment"] = sentiment
         output["summary"] = summary
@@ -246,6 +246,7 @@ def main():
                 review,
                 fake_model,
                 sentiment_model,
+                tokenizer, 
                 summarization_model
             )
 
