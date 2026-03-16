@@ -223,14 +223,14 @@ def process_dataset(df, fake_model, sentiment_model, tokenizer, summarization_mo
             # Show available columns for reference
             st.write(list(df.columns))
             
-            return None, None, None, None
+            return None, None
     
     # Get review data
     reviews = df[review_column].dropna().astype(str).tolist()
     
     if len(reviews) == 0:
         st.warning("⚠️ No valid review data found.")
-        return None, None, None, None
+        return None, None
     
     # Show processing information
     st.success(f"✅ Successfully loaded {len(reviews)} reviews. Analyzing...")
@@ -240,8 +240,7 @@ def process_dataset(df, fake_model, sentiment_model, tokenizer, summarization_mo
     
     # Analyze sentiment
     sentiment_stats = analyze_sentiment(real_reviews, sentiment_model)
-    
-    
+      
     return fake_stats, sentiment_stats
 
 
@@ -425,12 +424,6 @@ def main():
 
             st.pyplot(fig2)
 
-
-            st.subheader("Top Customer Feedback Keywords")
-
-            kw_df = pd.DataFrame(keywords, columns=["Keyword", "Frequency"])
-
-            st.table(kw_df)
 
             st.subheader("Business Insight")
 
