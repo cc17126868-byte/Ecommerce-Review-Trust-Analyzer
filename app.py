@@ -251,12 +251,33 @@ def main():
             col1, col2 = st.columns(2)
 
             col1.subheader("Fake Review Detection")
-            col1.write(result["fake"])
+            fake_label = result["fake"]["label"]
+            fake_score = result["fake"]["score"]
+
+            if fake_label in ["FAKE", "LABEL_0"]:
+                status = "⚠️ Potential Fake Review"
+            else:
+                status = "✅ Authentic Review"
+
+            col1.subheader("Review Authenticity")
+
+            col1.write(status)
+
+            col1.caption(f"Confidence: {round(fake_score*100,2)}%")
 
             if "sentiment" in result:
 
                 col2.subheader("Sentiment")
-                col2.write(result["sentiment"])
+                sent_label = result["sentiment"]["label"]
+                sent_score = result["sentiment"]["score"]
+                
+                if sent_label in ["POSITIVE", "LABEL_1"]:
+                    sentiment = "😊 Positive"
+                else:
+                    sentiment = "😞 Negative"
+                col2.subheader("Customer Sentiment")
+                col2.write(sentiment)
+                col2.caption(f"Confidence: {round(sent_score*100,2)}%")
 
                 st.subheader("Review Summary")
                 st.write(result["summary"])
