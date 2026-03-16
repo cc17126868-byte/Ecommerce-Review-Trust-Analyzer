@@ -241,17 +241,8 @@ def process_dataset(df, fake_model, sentiment_model, tokenizer, summarization_mo
     # Analyze sentiment
     sentiment_stats = analyze_sentiment(real_reviews, sentiment_model)
     
-    # Generate summary
-    summary = generate_summary(
-        real_reviews,
-        tokenizer,
-        summarization_model
-    )
     
-    # Extract keywords
-    keywords = extract_keywords(real_reviews)
-    
-    return fake_stats, sentiment_stats, summary, keywords
+    return fake_stats, sentiment_stats
 
 
 # ==============================
@@ -379,7 +370,7 @@ def main():
 
             progress = st.progress(0)
 
-            fake_stats, sentiment_stats, summary, keywords = process_dataset(
+            fake_stats, sentiment_stats, = process_dataset(
                 df,
                 fake_model,
                 sentiment_model,
@@ -440,12 +431,6 @@ def main():
             kw_df = pd.DataFrame(keywords, columns=["Keyword", "Frequency"])
 
             st.table(kw_df)
-
-
-            st.subheader("Customer Feedback Summary")
-
-            st.write(summary)
-
 
             st.subheader("Business Insight")
 
