@@ -25,7 +25,7 @@ def load_models():
     )
 
     summarizer = pipeline(
-        "text-generation",
+        "text2text-generation",
         model="JerryJJJJJ/review-summarization-flan-t5"
     )
 
