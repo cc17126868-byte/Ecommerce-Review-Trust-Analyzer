@@ -165,22 +165,92 @@ def plot_pie(labels, values, title, colors):
 # Dataset Processing
 # ==============================
 
-def process_dataset(df, fake_model, sentiment_model, summarization_model):
-
-    reviews = df["review_body"].dropna().tolist()
-
+def process_dataset(df, fake_model, sentiment_model, tokenizer, summarization_model):
+    """
+    Process dataset with support for multiple review column names
+    """
+    # Define possible review column names
+    possible_columns = [
+        'review_body',
+        'review_text',
+        'text',
+        'comment',
+        'review',
+        'feedback',
+        'content',
+        'review_content',
+        'customer_review',
+        'product_review',
+        'review_description',
+        'comment_text',
+        'user_review',
+        'review_comment',
+        'body'
+    ]
+    
+    # Find existing column
+    review_column = None
+    for col in possible_columns:
+        if col in df.columns:
+            review_column = col
+            break
+    
+    # If no standard column found, try using the first text column
+    if review_column is None:
+        # Get all possible text columns
+        text_columns = df.select_dtypes(include=['object']).columns
+        
+        # Exclude potential non-review columns
+        exclude_patterns = ['id', 'date', 'time', 'rating', 'score', 'helpful', 'vote']
+        candidate_columns = [
+            col for col in text_columns 
+            if not any(pattern in col.lower() for pattern in exclude_patterns)
+        ]
+        
+        if len(candidate_columns) > 0:
+            # Use the first eligible column
+            review_column = candidate_columns[0]
+            st.info(f"✅ Automatically detected review column: '{review_column}'")
+        else:
+            st.error("""
+            ❌ No review column found. Please ensure your CSV file contains a text column for reviews.
+            
+            Supported column names include: review_body, review_text, text, comment, review, feedback, content, etc.
+            
+            Your CSV file contains the following columns:
+            """)
+            
+            # Show available columns for reference
+            st.write(list(df.columns))
+            
+            return None, None, None, None
+    
+    # Get review data
+    reviews = df[review_column].dropna().astype(str).tolist()
+    
+    if len(reviews) == 0:
+        st.warning("⚠️ No valid review data found.")
+        return None, None, None, None
+    
+    # Show processing information
+    st.success(f"✅ Successfully loaded {len(reviews)} reviews. Analyzing...")
+    
+    # Analyze fake reviews
     fake_stats, real_reviews = detect_fake_reviews(reviews, fake_model)
-
+    
+    # Analyze sentiment
     sentiment_stats = analyze_sentiment(real_reviews, sentiment_model)
-
+    
+    # Generate summary
     summary = generate_summary(
-    real_reviews,
-    tokenizer,
-    summarization_model
-)
-
+        real_reviews,
+        tokenizer,
+        summarization_model
+    )
+    
+    # Extract keywords
     keywords = extract_keywords(real_reviews)
-
+    
     return fake_stats, sentiment_stats, summary, keywords
 
 
@@ -313,6 +383,7 @@ def main():
                 df,
                 fake_model,
                 sentiment_model,
+                tokenizer,
                 summarization_model
             )
 
