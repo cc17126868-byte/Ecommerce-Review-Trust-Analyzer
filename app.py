@@ -47,7 +47,7 @@ def detect_fake_reviews(reviews, model):
 
         label = result["label"]
 
-        if label in ["FAKE", "LABEL_1"]:
+        if label in ["FAKE", "LABEL_0"]:
             fake_count += 1
         else:
             real_reviews.append(review)
