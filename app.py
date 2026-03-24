@@ -273,6 +273,24 @@ def analyze_single_review(review, fake_model, sentiment_model, tokenizer, summar
 
 def main():
 
+    # 在 main() 函数开头，添加侧边栏
+with st.sidebar:
+    st.header("📌 About This Tool")
+    st.markdown("""
+    ### Model: DistilBERT Fine-tuned
+    This model was fine-tuned on a dataset of **human-written** vs **AI-generated** reviews.
+    
+    | Label | Meaning |
+    |-------|---------|
+    | **0 / FAKE** | 🤖 AI-Generated Review |
+    | **1 / REAL** | 👤 Human-Written Review |
+    
+    ### Capabilities
+    - Detect computer-generated fake reviews
+    - Analyze sentiment of authentic reviews
+    - Summarize genuine customer feedback
+    """)
+
     st.set_page_config(
         page_title="E-Commerce Review Trust Analyzer",
         page_icon="📊",
@@ -318,7 +336,7 @@ def main():
             fake_score = result["fake"]["score"]
 
             if fake_label in ["FAKE", "LABEL_0"]:
-                status = "⚠️ Potential Fake Review"
+                status = "⚠️ Potential Fake/AI-Generated Review"
             else:
                 status = "✅ Authentic Review"
 
@@ -384,7 +402,7 @@ def main():
             col1, col2, col3 = st.columns(3)
 
             col1.metric("Total Reviews", fake_stats["total"])
-            col2.metric("Fake Reviews", fake_stats["fake"])
+            col2.metric("Fake/AI-Generated Reviews", fake_stats["fake"])
             col3.metric("Real Reviews", fake_stats["real"])
 
             trust_score = round((1 - fake_stats["fake"] / fake_stats["total"]) * 100, 2)
