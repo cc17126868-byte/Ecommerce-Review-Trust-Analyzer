@@ -47,7 +47,7 @@ def detect_fake_reviews(reviews, model):
 
         label = result["label"]
 
-        if label in ["FAKE", "LABEL_1"]:
+        if label in ["FAKE", "LABEL_0"]:
             fake_count += 1
         else:
             real_reviews.append(review)
@@ -254,7 +254,7 @@ def analyze_single_review(review, fake_model, sentiment_model, tokenizer, summar
 
     output = {"fake": fake_result}
 
-    if fake_result["label"] == "LABEL_1":
+    if fake_result["label"] == "LABEL_0":
         pass
     else:
         sentiment = sentiment_model(review)[0]
@@ -317,7 +317,7 @@ def main():
             fake_label = result["fake"]["label"]
             fake_score = result["fake"]["score"]
 
-            if fake_label in ["FAKE", "LABEL_1"]:
+            if fake_label in ["FAKE", "LABEL_0"]:
                 status = "⚠️ Potential Fake Review"
             else:
                 status = "✅ Authentic Review"
