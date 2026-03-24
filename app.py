@@ -282,13 +282,13 @@ def main():
     with st.sidebar:
         st.header("📌 About This Tool")
         st.markdown("""
-        ### Model: DistilBERT Fine-tuned
+        ### One of the Models: DistilBERT Fine-tuned
         This model was fine-tuned to distinguish:
         
         | Label | Meaning |
         |-------|---------|
-        | **LABEL_0 / FAKE** | 🤖 **AI-Generated Review** |
-        | **LABEL_1 / REAL** | 👤 **Human-Written Review** |
+        | **LABEL_1 / FAKE** | 🤖 **AI-Generated Review** |
+        | **LABEL_0 / REAL** | 👤 **Human-Written Review** |
         
         ---
         
