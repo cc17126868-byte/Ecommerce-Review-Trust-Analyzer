@@ -16,7 +16,7 @@ def load_models():
 
     fake_detector = pipeline(
         "text-classification",
-        model="JerryJJJJJ/fake-review-detector-distilbert"
+        model="JerryJJJJJ/Fake-review-detector-distilbert-V2"
     )
 
     sentiment_model = pipeline(
@@ -254,7 +254,7 @@ def analyze_single_review(review, fake_model, sentiment_model, tokenizer, summar
 
     output = {"fake": fake_result}
 
-    if fake_result["label"] in ["FAKE", "LABEL_0"]:
+    if fake_result["label"] == "LABEL_0":
         pass
     else:
         sentiment = sentiment_model(review)[0]
