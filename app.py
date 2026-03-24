@@ -273,29 +273,40 @@ def analyze_single_review(review, fake_model, sentiment_model, tokenizer, summar
 
 def main():
 
-    # 在 main() 函数开头，添加侧边栏
-with st.sidebar:
-    st.header("📌 About This Tool")
-    st.markdown("""
-    ### Model: DistilBERT Fine-tuned
-    This model was fine-tuned on a dataset of **human-written** vs **AI-generated** reviews.
-    
-    | Label | Meaning |
-    |-------|---------|
-    | **0 / FAKE** | 🤖 AI-Generated Review |
-    | **1 / REAL** | 👤 Human-Written Review |
-    
-    ### Capabilities
-    - Detect computer-generated fake reviews
-    - Analyze sentiment of authentic reviews
-    - Summarize genuine customer feedback
-    """)
-
     st.set_page_config(
         page_title="E-Commerce Review Trust Analyzer",
         page_icon="📊",
         layout="wide"
     )
+
+     with st.sidebar:
+         st.header("📌 About This Tool")
+         st.markdown("""
+        ### Model: DistilBERT Fine-tuned
+        This model was fine-tuned to distinguish:
+        
+        | Label | Meaning |
+        |-------|---------|
+        | **LABEL_0 / FAKE** | 🤖 **AI-Generated Review** |
+        | **LABEL_1 / REAL** | 👤 **Human-Written Review** |
+        
+        ---
+        
+        ### Capabilities
+        - ✅ Detect computer-generated fake reviews
+        - ✅ Analyze sentiment of authentic reviews
+        - ✅ Generate summaries of genuine feedback
+        
+        ---
+        
+        ### Why This Matters
+        AI-generated fake reviews can:
+        - Mislead customers
+        - Damage business reputation
+        - Skew product ratings
+        
+        This tool helps e-commerce merchants maintain **review integrity**.
+        """)
 
     st.title("📊 E-Commerce Review Trust & Feedback Analyzer")
 
