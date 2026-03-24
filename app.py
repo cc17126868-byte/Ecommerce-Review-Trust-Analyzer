@@ -70,6 +70,9 @@ def detect_fake_reviews(reviews, model):
 
 def analyze_sentiment(reviews, model):
 
+    if len(reviews) == 0:
+        return {"positive": 0, "negative": 0}
+    
     results = model(reviews)
 
     positive = 0
@@ -108,7 +111,8 @@ def generate_summary(reviews, tokenizer, model):
     inputs = tokenizer(
         combined_text,
         return_tensors="pt",
-        truncation=True
+        truncation=True,
+        max_length=512
     )
 
     outputs = model.generate(
@@ -130,13 +134,17 @@ def generate_summary(reviews, tokenizer, model):
 
 def extract_keywords(reviews):
 
+    if len(reviews) == 0:
+        return []
+    
     text = " ".join(reviews).lower()
 
     words = re.findall(r'\b[a-z]{4,}\b', text)
 
     stopwords = {
         "this","that","with","have","very","from","they","were","would",
-        "there","their","about","after","before","really"
+        "there","their","about","after","before","really","just","what",
+        "when","can","will","more","than","been","had","did","does","has"
     }
 
     filtered = [w for w in words if w not in stopwords]
@@ -274,32 +282,49 @@ def analyze_single_review(review, fake_model, sentiment_model, tokenizer, summar
 def main():
 
     st.set_page_config(
-        page_title="E-Commerce Review Trust Analyzer",
-        page_icon="📊",
+        page_title="Review Trust Analyzer",
+        page_icon="🔍",
         layout="wide"
     )
 
+    # ==================================================
+    # Sidebar - Model Information
+    # ==================================================
+    
     with st.sidebar:
         st.header("📌 About This Tool")
         st.markdown("""
-        ### One of the Models: DistilBERT Fine-tuned
-        This model was fine-tuned to distinguish:
+        ### Three Fine-Tuned Models
         
-        | Label | Meaning |
-        |-------|---------|
-        | **LABEL_1 / FAKE** | 🤖 **AI-Generated Review** |
-        | **LABEL_0 / REAL** | 👤 **Human-Written Review** |
-        
-        ---
-        
-        ### Capabilities
-        - ✅ Detect computer-generated fake reviews
-        - ✅ Analyze sentiment of authentic reviews
-        - ✅ Generate summaries of genuine feedback
+        | Task | Model |
+        |------|-------|
+        | 🔍 Fake Review Detection | DistilBERT |
+        | 😊 Sentiment Analysis | RoBERTa |
+        | 📝 Review Summarization | FLAN-T5 |
         
         ---
         
-        ### Why This Matters
+        ### Label Definitions
+        
+        | Model Output | Meaning |
+        |--------------|---------|
+        | **LABEL_1 / FAKE** | 🤖 **AI-Generated / Fake Review** |
+        | **LABEL_0 / REAL** | 👤 **Human-Written / Authentic Review** |
+        
+        ---
+        
+        ### How to Use
+        
+        **Single Review:** Enter text and click analyze
+        
+        **Batch Analysis:** Upload CSV with review column
+        
+        Supported column names: `text`, `review`, `content`, `comment`, `review_body`, etc.
+        
+        ---
+        
+        ### Why It Matters
+        
         AI-generated fake reviews can:
         - Mislead customers
         - Damage business reputation
@@ -307,166 +332,311 @@ def main():
         
         This tool helps e-commerce merchants maintain **review integrity**.
         """)
-
-    st.title("📊 E-Commerce Review Trust & Feedback Analyzer")
-
-    st.markdown(
-    """
-    Detect **fake reviews**, analyze **customer sentiment**, and generate **automatic feedback insights**.
-    """
-    )
-
-    fake_model, sentiment_model, tokenizer, summarization_model = load_models()
-
-    tab1, tab2 = st.tabs(["Single Review", "Dataset Analysis"])
+        
+        st.divider()
+        st.caption("🚀 Powered by DistilBERT | RoBERTa | FLAN-T5")
 
     # ==================================================
-    # Single Review
+    # Main Title
+    # ==================================================
+    
+    st.title("🔍 Review Trust Analyzer")
+    
+    st.markdown(
+        """
+        Detect **AI-generated fake reviews**, analyze **customer sentiment**, and generate **automatic feedback insights**.
+        """
+    )
+    
+    st.caption("⚡ Powered by fine-tuned DistilBERT, RoBERTa, and FLAN-T5 models")
+
+    # ==================================================
+    # Model Loading with Status
+    # ==================================================
+    
+    with st.spinner("Loading AI models... This may take a moment."):
+        fake_model, sentiment_model, tokenizer, summarization_model = load_models()
+    
+    st.success("✅ Models loaded successfully!")
+
+    # ==================================================
+    # Tabs
+    # ==================================================
+    
+    tab1, tab2 = st.tabs(["🔍 Single Review", "📊 Batch Analysis"])
+
+    # ==================================================
+    # Tab 1: Single Review
     # ==================================================
 
     with tab1:
 
-        st.header("Single Review Analysis")
-
-        review = st.text_area("Enter review text")
-
-        if st.button("Analyze Review"):
-
-            result = analyze_single_review(
-                review,
-                fake_model,
-                sentiment_model,
-                tokenizer, 
-                summarization_model
+        st.header("🔍 Single Review Analysis")
+        
+        st.caption("Enter a customer review to check its authenticity, sentiment, and generate a summary.")
+        
+        # Example review placeholder
+        example_review = "This product exceeded my expectations! The quality is outstanding and delivery was fast. Highly recommend!"
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            review = st.text_area(
+                "Review text",
+                height=150,
+                placeholder="Paste a customer review here... e.g., " + example_review[:50] + "..."
             )
-
-            col1, col2 = st.columns(2)
-
-            col1.subheader("Fake Review Detection")
-            fake_label = result["fake"]["label"]
-            fake_score = result["fake"]["score"]
-
-            if fake_label in ["FAKE", "LABEL_1"]:
-                status = "⚠️ Potential Fake/AI-Generated Review"
+        
+        with col2:
+            st.write("")
+            st.write("")
+            if st.button("📋 Load Example", use_container_width=True):
+                st.session_state.example_review = example_review
+                st.rerun()
+        
+        # Load example if button was clicked
+        if "example_review" in st.session_state and not review:
+            review = st.session_state.example_review
+            st.session_state.review_input = review
+            st.rerun()
+        
+        if st.button("🔍 Analyze Review", type="primary", use_container_width=False):
+            
+            if not review.strip():
+                st.warning("⚠️ Please enter a review to analyze.")
             else:
-                status = "✅ Authentic Review"
-
-            col1.subheader("Review Authenticity")
-
-            col1.write(status)
-
-            col1.caption(f"Confidence: {round(fake_score*100,2)}%")
-
-            if "sentiment" in result:
-
-                col2.subheader("Sentiment")
-                sent_label = result["sentiment"]["label"]
-                sent_score = result["sentiment"]["score"]
+                with st.spinner("Analyzing review..."):
+                    result = analyze_single_review(
+                        review,
+                        fake_model,
+                        sentiment_model,
+                        tokenizer, 
+                        summarization_model
+                    )
                 
-                if sent_label in ["POSITIVE", "LABEL_1"]:
-                    sentiment = "😊 Positive"
+                st.divider()
+                
+                # Results layout
+                col1, col2 = st.columns(2)
+                
+                # Column 1: Authenticity Result
+                with col1:
+                    st.subheader("🔍 Review Authenticity")
+                    fake_label = result["fake"]["label"]
+                    fake_score = result["fake"]["score"]
+                    
+                    if fake_label in ["FAKE", "LABEL_1"]:
+                        st.error("🤖 **AI-Generated / Fake Review**")
+                        st.caption(f"Confidence: {round(fake_score*100,2)}%")
+                        st.info("⚠️ This review was likely created by a computer or automated system.")
+                    else:
+                        st.success("👤 **Human-Written / Authentic Review**")
+                        st.caption(f"Confidence: {round(fake_score*100,2)}%")
+                        st.info("✅ This review appears to be written by a real customer.")
+                
+                # Column 2: Sentiment Result (only for authentic reviews)
+                if "sentiment" in result:
+                    with col2:
+                        st.subheader("😊 Customer Sentiment")
+                        sent_label = result["sentiment"]["label"]
+                        sent_score = result["sentiment"]["score"]
+                        
+                        if sent_label in ["POSITIVE", "LABEL_1"]:
+                            st.success("😊 **Positive**")
+                        else:
+                            st.error("😞 **Negative**")
+                        st.caption(f"Confidence: {round(sent_score*100,2)}%")
+                
+                # Summary (only for authentic reviews)
+                if "sentiment" in result:
+                    st.subheader("📝 Review Summary")
+                    st.info(result["summary"])
                 else:
-                    sentiment = "😞 Negative"
-                col2.subheader("Customer Sentiment")
-                col2.write(sentiment)
-                col2.caption(f"Confidence: {round(sent_score*100,2)}%")
-
-                st.subheader("Review Summary")
-                st.write(result["summary"])
-
-            else:
-
-                st.warning("Review likely fake. Sentiment skipped.")
-
+                    st.warning("ℹ️ Sentiment analysis and summarization skipped for AI-generated reviews.")
+                
+                st.divider()
+                
+                # Add a reset button
+                if st.button("🔄 New Analysis", type="secondary"):
+                    st.session_state.example_review = ""
+                    st.rerun()
 
     # ==================================================
-    # Dataset Analysis
+    # Tab 2: Dataset Analysis
     # ==================================================
 
     with tab2:
 
-        st.header("Dataset Review Analysis")
-
-        uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
-
+        st.header("📊 Batch Review Analysis")
+        
+        st.caption("""
+        Upload a CSV file containing customer reviews. The tool will analyze all reviews and provide:
+        - AI-generated review detection
+        - Sentiment analysis (for authentic reviews only)
+        - Business insights and recommendations
+        """)
+        
+        st.info("💡 **Supported review column names:** `text`, `review`, `content`, `comment`, `review_body`, `feedback`, etc.")
+        
+        uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
+        
         if uploaded_file:
-
+            
             df = pd.read_csv(uploaded_file)
-
-            with st.expander("Dataset Preview"):
+            
+            with st.expander("📋 Dataset Preview", expanded=True):
                 st.dataframe(df.head())
-
-            progress = st.progress(0)
-
-            fake_stats, sentiment_stats, = process_dataset(
-                df,
-                fake_model,
-                sentiment_model,
-                tokenizer,
-                summarization_model
-            )
-
-            progress.progress(100)
-
-            st.subheader("Key Metrics")
-
-            col1, col2, col3 = st.columns(3)
-
-            col1.metric("Total Reviews", fake_stats["total"])
-            col2.metric("Fake/AI-Generated Reviews", fake_stats["fake"])
-            col3.metric("Real Reviews", fake_stats["real"])
-
-            trust_score = round((1 - fake_stats["fake"] / fake_stats["total"]) * 100, 2)
-
-            st.metric("Store Trust Score", f"{trust_score}/100")
-
-            if trust_score > 80:
-                st.success("Low Fake Review Risk")
-
-            elif trust_score > 60:
-                st.warning("Moderate Fake Review Risk")
-
-            else:
-                st.error("High Fake Review Risk")
-
-
-            st.subheader("Review Authenticity")
-
-            fig1 = plot_pie(
-                ["Fake", "Real"],
-                [fake_stats["fake"], fake_stats["real"]],
-                "Fake vs Real Reviews",
-                ["#FF9800", "#2196F3"]
-            )
-
-            st.pyplot(fig1)
-
-
-            st.subheader("Customer Sentiment")
-
-            fig2 = plot_pie(
-                ["Positive", "Negative"],
-                [sentiment_stats["positive"], sentiment_stats["negative"]],
-                "Sentiment Distribution",
-                ["#4CAF50", "#FF5252"]
-            )
-
-            st.pyplot(fig2)
-
-
-            st.subheader("Business Insight")
-
-            if sentiment_stats["positive"] > sentiment_stats["negative"]:
-
-                st.info(
-                    "Customers generally express positive sentiment toward the product."
+                st.caption(f"📊 Total rows: {len(df)} | Columns: {list(df.columns)}")
+            
+            if st.button("🚀 Start Analysis", type="primary", use_container_width=False):
+                
+                # Progress indicators
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                status_text.text("📂 Loading reviews...")
+                progress_bar.progress(20)
+                
+                # Process dataset
+                result = process_dataset(
+                    df,
+                    fake_model,
+                    sentiment_model,
+                    tokenizer,
+                    summarization_model
                 )
-
-            else:
-
-                st.warning(
-                    "Customer sentiment appears negative. Merchants should investigate product issues."
-                )
+                
+                if result[0] is None:
+                    progress_bar.empty()
+                    status_text.empty()
+                    st.error("❌ Analysis failed. Please check your CSV format.")
+                else:
+                    fake_stats, sentiment_stats = result
+                    
+                    status_text.text("📊 Generating insights...")
+                    progress_bar.progress(60)
+                    
+                    # ===== Results Display =====
+                    
+                    st.divider()
+                    st.subheader("📈 Analysis Results")
+                    
+                    # Key Metrics Row
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Total Reviews", fake_stats["total"])
+                    with col2:
+                        st.metric("🤖 AI-Generated", fake_stats["fake"], delta=f"-{fake_stats['fake_percentage']}%")
+                    with col3:
+                        st.metric("👤 Human-Written", fake_stats["real"])
+                    with col4:
+                        trust_score = round((1 - fake_stats["fake"] / fake_stats["total"]) * 100, 2)
+                        st.metric("Trust Score", f"{trust_score}%")
+                    
+                    # Trust Score Feedback
+                    if trust_score > 80:
+                        st.success(f"✅ **Trust Score: {trust_score}/100** - Low risk of fake reviews")
+                    elif trust_score > 60:
+                        st.warning(f"⚠️ **Trust Score: {trust_score}/100** - Moderate risk, monitor patterns")
+                    else:
+                        st.error(f"❌ **Trust Score: {trust_score}/100** - High risk, investigate immediately")
+                    
+                    status_text.text("📈 Creating visualizations...")
+                    progress_bar.progress(80)
+                    
+                    # Charts Row
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.subheader("Review Authenticity")
+                        fig1 = plot_pie(
+                            ["🤖 AI-Generated", "👤 Human-Written"],
+                            [fake_stats["fake"], fake_stats["real"]],
+                            "AI-Generated vs Human-Written Reviews",
+                            ["#FF9800", "#2196F3"]
+                        )
+                        st.pyplot(fig1)
+                    
+                    with col2:
+                        st.subheader("Customer Sentiment")
+                        fig2 = plot_pie(
+                            ["😊 Positive", "😞 Negative"],
+                            [sentiment_stats["positive"], sentiment_stats["negative"]],
+                            "Sentiment Distribution (Authentic Reviews Only)",
+                            ["#4CAF50", "#FF5252"]
+                        )
+                        st.pyplot(fig2)
+                    
+                    # Business Insights
+                    st.subheader("💡 Business Insights")
+                    
+                    # AI-Generated Review Risk Analysis
+                    if fake_stats["fake_percentage"] > 30:
+                        st.error(f"""
+                        **⚠️ HIGH AI-GENERATED REVIEW RISK**  
+                        {fake_stats['fake_percentage']}% of reviews appear to be computer-generated.
+                        
+                        **Recommended Actions:**
+                        - Review your review moderation process
+                        - Consider implementing CAPTCHA for review submission
+                        - Investigate suspicious review patterns (same IP, repetitive content)
+                        - Flag and remove confirmed fake reviews
+                        """)
+                    elif fake_stats["fake_percentage"] > 10:
+                        st.warning(f"""
+                        **⚠️ MODERATE AI-GENERATED REVIEW RISK**  
+                        {fake_stats['fake_percentage']}% of reviews appear to be computer-generated.
+                        
+                        **Recommended Actions:**
+                        - Monitor review patterns for anomalies
+                        - Strengthen review verification process
+                        - Consider adding review confirmation emails
+                        """)
+                    else:
+                        st.success(f"""
+                        **✅ LOW AI-GENERATED REVIEW RISK**  
+                        Only {fake_stats['fake_percentage']}% of reviews are flagged as computer-generated.
+                        
+                        Your review system appears healthy with mostly authentic customer feedback.
+                        """)
+                    
+                    # Sentiment Analysis Insight
+                    if sentiment_stats["positive"] > sentiment_stats["negative"]:
+                        st.info(f"""
+                        **📈 POSITIVE CUSTOMER SENTIMENT**  
+                        {sentiment_stats['positive']} out of {fake_stats['real']} authentic reviews are positive.
+                        
+                        Customers generally express positive sentiment. This is a good sign for product quality and customer satisfaction.
+                        """)
+                    else:
+                        st.warning(f"""
+                        **📉 NEGATIVE CUSTOMER SENTIMENT**  
+                        {sentiment_stats['negative']} out of {fake_stats['real']} authentic reviews are negative.
+                        
+                        Customer sentiment appears negative. Merchants should investigate product issues and address common complaints.
+                        """)
+                    
+                    # Keyword Analysis (Optional)
+                    if fake_stats["real"] > 0:
+                        st.subheader("🏷️ Common Keywords in Authentic Reviews")
+                        keywords = extract_keywords(real_reviews)
+                        if keywords:
+                            keyword_df = pd.DataFrame(keywords, columns=["Keyword", "Frequency"])
+                            st.dataframe(keyword_df, use_container_width=True)
+                        else:
+                            st.caption("No keywords extracted from authentic reviews.")
+                    
+                    # Generate Summary of Authentic Reviews
+                    if fake_stats["real"] > 0:
+                        st.subheader("📝 Summary of Authentic Reviews")
+                        summary = generate_summary(real_reviews, tokenizer, summarization_model)
+                        st.info(summary)
+                    
+                    # Complete
+                    progress_bar.progress(100)
+                    status_text.text("✅ Analysis complete!")
+                    st.success("✅ Analysis completed successfully!")
 
 
 # ==============================
