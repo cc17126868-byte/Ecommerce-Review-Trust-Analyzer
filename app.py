@@ -279,9 +279,9 @@ def main():
         layout="wide"
     )
 
-     with st.sidebar:
-         st.header("📌 About This Tool")
-         st.markdown("""
+    with st.sidebar:
+        st.header("📌 About This Tool")
+        st.markdown("""
         ### Model: DistilBERT Fine-tuned
         This model was fine-tuned to distinguish:
         
