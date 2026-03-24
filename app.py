@@ -593,19 +593,6 @@ def main():
                         Customer sentiment appears negative. Merchants should investigate product issues and address common complaints.
                         """)
                     
-                    # Keyword Analysis (Optional)
-                    if fake_stats["real"] > 0:
-                        st.subheader("🏷️ Common Keywords in Authentic Reviews")
-                        # Need to get real_reviews from process_dataset
-                        # For now, we have fake_stats and sentiment_stats but not real_reviews
-                        # We can modify process_dataset to return real_reviews
-                        st.caption("Keywords extracted from authentic reviews.")
-                    
-                    # Generate Summary of Authentic Reviews
-                    if fake_stats["real"] > 0:
-                        st.subheader("📝 Summary of Authentic Reviews")
-                        # Need real_reviews for summary generation
-                        st.caption("Summary of authentic customer feedback.")
                     
                     # Complete
                     progress_bar.progress(100)
